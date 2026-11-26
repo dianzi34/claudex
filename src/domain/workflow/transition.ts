@@ -1,3 +1,4 @@
+import { InvalidTransitionError } from "@/domain/workflow/errors";
 import type {
   Workflow,
   WorkflowEvent,
@@ -81,14 +82,16 @@ function apply<T extends WorkflowEventType>(
   const handler: Handler<T> | undefined =
     TRANSITIONS[workflow.state][event.type];
   if (!handler) {
-    // Replaced by InvalidTransitionError in AC-11.
-    throw new Error(
-      `Event ${event.type} is not allowed in state ${workflow.state}`,
-    );
+    throw new InvalidTransitionError(workflow.state, event.type);
   }
   return Object.freeze(handler(workflow, event));
 }
 
 export function transition(workflow: Workflow, event: WorkflowEvent): Workflow {
   return apply(workflow, event);
+}
+
+/** A state is terminal when the transition table gives it no events. */
+export function isTerminal(state: WorkflowState): boolean {
+  return Object.keys(TRANSITIONS[state]).length === 0;
 }
