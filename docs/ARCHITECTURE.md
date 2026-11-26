@@ -64,7 +64,12 @@ Coverage is measured over `src/**/*.ts`.
 
 ## 4. Current state
 
-Only the Next.js scaffold exists (`src/app/`) plus a smoke test
-(`tests/unit/smoke.test.ts`). `src/domain/` and `src/infra/` are created when
-their first code lands. The concrete state machine API and error semantics are
-decided in the stage ② plan (`docs/plans/workflow-state-machine.md`).
+The state machine design is final in `docs/plans/workflow-state-machine.md`:
+public API in §4, error semantics (typed errors are thrown) in §3, and the test
+layout in §6. The code is built in three TDD rounds (R1–R3) under
+`src/domain/workflow/`, with tests in `tests/unit/workflow/`. `src/infra/` does
+not exist yet.
+
+The scaffold's smoke test (`tests/unit/smoke.test.ts`) is deleted in R1 (plan
+§7). After that, the workflow tests cover the `@/` alias, because they import
+`@/domain/workflow`.
