@@ -28,7 +28,9 @@ const TRANSITIONS: Record<WorkflowState, StateHandlers> = {
       latestResult: event.result,
     }),
   },
-  in_review: {},
+  in_review: {
+    REVIEW_APPROVE: (workflow) => ({ ...workflow, state: "awaiting_human" }),
+  },
   revising: {},
   awaiting_human: {},
   completed: {},
