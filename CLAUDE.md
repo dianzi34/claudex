@@ -24,8 +24,8 @@ npm test               # vitest run (all tests once)
 npm run test:watch
 npm run test:coverage  # v8 coverage, text + html in coverage/
 
-npx vitest run tests/unit/smoke.test.ts   # single file
-npx vitest run -t "AC-06"                 # single test / AC by name
+npx vitest run tests/unit/workflow/create-workflow.test.ts   # single file
+npx vitest run -t "AC-06"                                    # single test / AC by name
 ```
 
 ## Architecture decisions
@@ -35,7 +35,9 @@ npx vitest run -t "AC-06"                 # single test / AC by name
 - D2: workflow values are immutable; a failed transition leaves the input unchanged.
 - D3: plain-TypeScript transition table, no XState or similar.
 - D4: tests live in `tests/unit/`, not next to source.
-- State machine API and error semantics are decided in `docs/plans/workflow-state-machine.md` (stage ②).
+- State machine API, error semantics (thrown typed errors) and test file layout are decided in the merged stage ② plan:
+
+@docs/plans/workflow-state-machine.md
 
 @docs/ARCHITECTURE.md
 
