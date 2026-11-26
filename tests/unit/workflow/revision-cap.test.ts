@@ -179,3 +179,21 @@ describe("AC-09 reviewer rejects at the revision cap", () => {
     expect(Object.isFrozen(next.reviewFeedback)).toBe(true);
   });
 });
+
+describe("AC-08 owner approves after a cap hit", () => {
+  it("AC-08 moves a capped awaiting_human workflow to completed and keeps reachedCap true", () => {
+    const capped = transition(inReviewAtCap(3), {
+      type: "REVIEW_REJECT",
+      feedback: "Feedback 4",
+    });
+    expect(capped.state).toBe("awaiting_human");
+    expect(capped.reachedCap).toBe(true);
+
+    const next = transition(capped, { type: "OWNER_APPROVE" });
+
+    expect(next).toEqual({ ...capped, state: "completed" });
+    expect(next.reachedCap).toBe(true);
+    expect(next.revisionRound).toBe(3);
+    expect(next.reviewFeedback).toHaveLength(4);
+  });
+});
