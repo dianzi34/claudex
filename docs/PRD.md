@@ -80,7 +80,8 @@ rounds. The design, API and test layout are in
 
 - **AC-01** Given a task description and acceptance criteria, when a workflow
   is created without a revision cap, then it is in `pending`, `revisionRound`
-  is 0 and `maxRevisions` is 3.
+  is 0 and `maxRevisions` is 3; when it is created with a valid cap (for
+  example 5), then `maxRevisions` is that value.
 - **AC-02** Given a revision cap that is not a positive integer (0, negative,
   or fractional), when a workflow is created, then creation fails with a
   validation error.
