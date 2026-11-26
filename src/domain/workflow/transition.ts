@@ -1,3 +1,7 @@
+import {
+  InvalidTransitionError,
+  ValidationError,
+} from "@/domain/workflow/errors";
 import type {
   Workflow,
   WorkflowEvent,
@@ -17,6 +21,13 @@ type Handler<T extends WorkflowEventType> = (
 /** The events a state accepts, each keyed by its own event type. */
 type StateHandlers = { readonly [T in WorkflowEventType]?: Handler<T> };
 
+/** Throws ValidationError when `text` is blank (plan §1); text is never trimmed. */
+function requireNonBlank(field: string, text: string): void {
+  if (text.trim() === "") {
+    throw new ValidationError(field, `${field} must not be blank`);
+  }
+}
+
 /** First result (from generating) and revised result (from revising) alike. */
 const submitResult: Handler<"SUBMIT_RESULT"> = (workflow, event) => ({
   ...workflow,
@@ -33,21 +44,42 @@ const TRANSITIONS: Record<WorkflowState, StateHandlers> = {
   },
   in_review: {
     REVIEW_APPROVE: (workflow) => ({ ...workflow, state: "awaiting_human" }),
-    REVIEW_REJECT: (workflow, event) => ({
-      ...workflow,
-      state: "revising",
-      revisionRound: workflow.revisionRound + 1,
-      reviewFeedback: Object.freeze([
+    REVIEW_REJECT: (workflow, event) => {
+      requireNonBlank("feedback", event.feedback);
+      const reviewFeedback = Object.freeze([
         ...workflow.reviewFeedback,
         event.feedback,
-      ]),
-    }),
+      ]);
+      if (workflow.revisionRound < workflow.maxRevisions) {
+        return {
+          ...workflow,
+          state: "revising",
+          revisionRound: workflow.revisionRound + 1,
+          reviewFeedback,
+        };
+      }
+      // Rejection N+1: no more revisions, hand the task to the Owner.
+      return {
+        ...workflow,
+        state: "awaiting_human",
+        reachedCap: true,
+        reviewFeedback,
+      };
+    },
   },
   revising: {
     SUBMIT_RESULT: submitResult,
   },
   awaiting_human: {
     OWNER_APPROVE: (workflow) => ({ ...workflow, state: "completed" }),
+    OWNER_REJECT: (workflow, event) => {
+      requireNonBlank("reason", event.reason);
+      return {
+        ...workflow,
+        state: "rejected",
+        rejectionReason: event.reason,
+      };
+    },
   },
   completed: {},
   rejected: {},
@@ -64,14 +96,16 @@ function apply<T extends WorkflowEventType>(
   const handler: Handler<T> | undefined =
     TRANSITIONS[workflow.state][event.type];
   if (!handler) {
-    // Replaced by InvalidTransitionError in AC-11.
-    throw new Error(
-      `Event ${event.type} is not allowed in state ${workflow.state}`,
-    );
+    throw new InvalidTransitionError(workflow.state, event.type);
   }
   return Object.freeze(handler(workflow, event));
 }
 
 export function transition(workflow: Workflow, event: WorkflowEvent): Workflow {
   return apply(workflow, event);
+}
+
+/** A state is terminal when the transition table gives it no events. */
+export function isTerminal(state: WorkflowState): boolean {
+  return Object.keys(TRANSITIONS[state]).length === 0;
 }

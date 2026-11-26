@@ -1,3 +1,4 @@
+import { expect } from "vitest";
 import { createWorkflow, transition } from "@/domain/workflow";
 import type {
   CreateWorkflowInput,
@@ -52,7 +53,58 @@ export function workflowIn(
         }),
         { type: "REVIEW_APPROVE" },
       );
+    case "completed":
+      return transition(workflowIn("awaiting_human", overrides), {
+        type: "OWNER_APPROVE",
+      });
+    case "rejected":
+      return transition(workflowIn("awaiting_human", overrides), {
+        type: "OWNER_REJECT",
+        reason: "Not good enough",
+      });
     default:
       throw new Error(`workflowIn: state "${state}" is not supported yet`);
   }
+}
+
+/** Reviewer rejects, then the Worker submits a revision: in_review → in_review. */
+function rejectAndRevise(workflow: Workflow, n: number): Workflow {
+  const revising = transition(workflow, {
+    type: "REVIEW_REJECT",
+    feedback: `Feedback ${n}`,
+  });
+  expect(revising.state).toBe("revising");
+  expect(revising.revisionRound).toBe(n);
+  return transition(revising, {
+    type: "SUBMIT_RESULT",
+    result: `Revision ${n}`,
+  });
+}
+
+/**
+ * An in_review workflow whose revisionRound equals maxRevisions, reached by
+ * replaying rejection n → "Feedback n" and revision n → "Revision n".
+ */
+export function inReviewAtCap(maxRevisions: number): Workflow {
+  let workflow = workflowIn("in_review", { maxRevisions });
+  for (let n = 1; n <= maxRevisions; n++) {
+    workflow = rejectAndRevise(workflow, n);
+  }
+  expect(workflow.state).toBe("in_review");
+  expect(workflow.revisionRound).toBe(maxRevisions);
+  return workflow;
+}
+
+/**
+ * An awaiting_human workflow that hit the cap: inReviewAtCap(maxRevisions)
+ * plus the capped rejection "Feedback <maxRevisions + 1>".
+ */
+export function awaitingHumanAtCap(maxRevisions: number): Workflow {
+  const capped = transition(inReviewAtCap(maxRevisions), {
+    type: "REVIEW_REJECT",
+    feedback: `Feedback ${maxRevisions + 1}`,
+  });
+  expect(capped.state).toBe("awaiting_human");
+  expect(capped.reachedCap).toBe(true);
+  return capped;
 }
