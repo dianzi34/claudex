@@ -10,7 +10,7 @@ import type {
   WorkflowEventType,
   WorkflowState,
 } from "@/domain/workflow";
-import { workflowIn } from "./fixtures";
+import { inReviewAtCap, workflowIn } from "./fixtures";
 
 const STATES: readonly WorkflowState[] = [
   "pending",
@@ -110,4 +110,81 @@ describe("AC-11 events not allowed in a state are refused", () => {
       );
     },
   );
+});
+
+describe("AC-12 blank feedback or reason is refused", () => {
+  const BLANKS = ["", "   ", "\n\t"];
+
+  it.each(BLANKS)(
+    "AC-12 in_review + REVIEW_REJECT with blank feedback %j throws ValidationError and leaves the workflow unchanged",
+    (feedback) => {
+      const workflow = workflowIn("in_review");
+      const before = structuredClone(workflow);
+
+      const error = thrownBy(() =>
+        transition(workflow, { type: "REVIEW_REJECT", feedback }),
+      );
+
+      expect(error).toBeInstanceOf(ValidationError);
+      expect(error).toMatchObject({ field: "feedback" });
+      expect(workflow).toEqual(before);
+    },
+  );
+
+  it.each(BLANKS)(
+    "AC-12 at the cap, REVIEW_REJECT with blank feedback %j throws ValidationError and does not set reachedCap",
+    (feedback) => {
+      const workflow = inReviewAtCap(3);
+      const before = structuredClone(workflow);
+
+      const error = thrownBy(() =>
+        transition(workflow, { type: "REVIEW_REJECT", feedback }),
+      );
+
+      expect(error).toBeInstanceOf(ValidationError);
+      expect(error).toMatchObject({ field: "feedback" });
+      expect(workflow.reachedCap).toBe(false);
+      expect(workflow).toEqual(before);
+    },
+  );
+
+  it.each(BLANKS)(
+    "AC-12 awaiting_human + OWNER_REJECT with blank reason %j throws ValidationError and leaves the workflow unchanged",
+    (reason) => {
+      const workflow = workflowIn("awaiting_human");
+      const before = structuredClone(workflow);
+
+      const error = thrownBy(() =>
+        transition(workflow, { type: "OWNER_REJECT", reason }),
+      );
+
+      expect(error).toBeInstanceOf(ValidationError);
+      expect(error).toMatchObject({ field: "reason" });
+      expect(workflow).toEqual(before);
+    },
+  );
+
+  it("AC-12 accepts feedback with surrounding spaces and stores it exactly as given", () => {
+    const workflow = workflowIn("in_review");
+
+    const next = transition(workflow, {
+      type: "REVIEW_REJECT",
+      feedback: "  Tighten line two  ",
+    });
+
+    expect(next.state).toBe("revising");
+    expect(next.reviewFeedback.at(-1)).toBe("  Tighten line two  ");
+  });
+
+  it("AC-12 accepts a reason with surrounding spaces and stores it exactly as given", () => {
+    const workflow = workflowIn("awaiting_human");
+
+    const next = transition(workflow, {
+      type: "OWNER_REJECT",
+      reason: "\tOff topic \n",
+    });
+
+    expect(next.state).toBe("rejected");
+    expect(next.rejectionReason).toBe("\tOff topic \n");
+  });
 });
