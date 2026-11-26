@@ -47,7 +47,9 @@ const TRANSITIONS: Record<WorkflowState, StateHandlers> = {
       latestResult: event.result,
     }),
   },
-  awaiting_human: {},
+  awaiting_human: {
+    OWNER_APPROVE: (workflow) => ({ ...workflow, state: "completed" }),
+  },
   completed: {},
   rejected: {},
 };
