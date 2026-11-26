@@ -24,3 +24,13 @@ export interface CreateWorkflowInput {
   acceptanceCriteria: readonly string[];
   maxRevisions?: number; // default DEFAULT_MAX_REVISIONS
 }
+
+export type WorkflowEvent =
+  | { readonly type: "START_GENERATION" }
+  | { readonly type: "SUBMIT_RESULT"; readonly result: string }
+  | { readonly type: "REVIEW_APPROVE" }
+  | { readonly type: "REVIEW_REJECT"; readonly feedback: string }
+  | { readonly type: "OWNER_APPROVE" }
+  | { readonly type: "OWNER_REJECT"; readonly reason: string };
+
+export type WorkflowEventType = WorkflowEvent["type"];
