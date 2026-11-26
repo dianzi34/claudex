@@ -1,29 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { transition } from "@/domain/workflow";
-import type { Workflow } from "@/domain/workflow";
-import { workflowIn } from "./fixtures";
-
-/**
- * An awaiting_human workflow that got there by hitting the revision cap
- * (maxRevisions 1: reject → revise → reject again), using real events only.
- */
-function cappedAwaitingHuman(): Workflow {
-  const revising = transition(workflowIn("in_review", { maxRevisions: 1 }), {
-    type: "REVIEW_REJECT",
-    feedback: "Feedback 1",
-  });
-  const inReview = transition(revising, {
-    type: "SUBMIT_RESULT",
-    result: "Revision 1",
-  });
-  const capped = transition(inReview, {
-    type: "REVIEW_REJECT",
-    feedback: "Feedback 2",
-  });
-  expect(capped.state).toBe("awaiting_human");
-  expect(capped.reachedCap).toBe(true);
-  return capped;
-}
+import { awaitingHumanAtCap, workflowIn } from "./fixtures";
 
 describe("AC-10 owner rejects the workflow with a reason", () => {
   it("AC-10 moves awaiting_human to rejected", () => {
@@ -81,7 +58,7 @@ describe("AC-10 owner rejects the workflow with a reason", () => {
   });
 
   it("AC-10 rejects a capped workflow and keeps reachedCap true", () => {
-    const capped = cappedAwaitingHuman();
+    const capped = awaitingHumanAtCap(1);
 
     const next = transition(capped, {
       type: "OWNER_REJECT",
@@ -111,7 +88,7 @@ describe("AC-10 owner rejects the workflow with a reason", () => {
   });
 
   it("AC-10 does not mutate a capped input workflow", () => {
-    const capped = cappedAwaitingHuman();
+    const capped = awaitingHumanAtCap(1);
     const before = structuredClone(capped);
 
     transition(capped, { type: "OWNER_REJECT", reason: "No" });

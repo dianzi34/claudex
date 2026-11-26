@@ -1,32 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { transition } from "@/domain/workflow";
-import type { Workflow } from "@/domain/workflow";
-import { workflowIn } from "./fixtures";
-
-/** Reviewer rejects, then the Worker submits a revision: in_review → in_review. */
-function rejectAndRevise(workflow: Workflow, n: number): Workflow {
-  const revising = transition(workflow, {
-    type: "REVIEW_REJECT",
-    feedback: `Feedback ${n}`,
-  });
-  expect(revising.state).toBe("revising");
-  expect(revising.revisionRound).toBe(n);
-  return transition(revising, {
-    type: "SUBMIT_RESULT",
-    result: `Revision ${n}`,
-  });
-}
-
-/** An in_review workflow whose revisionRound equals maxRevisions. */
-function inReviewAtCap(maxRevisions: number): Workflow {
-  let workflow = workflowIn("in_review", { maxRevisions });
-  for (let n = 1; n <= maxRevisions; n++) {
-    workflow = rejectAndRevise(workflow, n);
-  }
-  expect(workflow.state).toBe("in_review");
-  expect(workflow.revisionRound).toBe(maxRevisions);
-  return workflow;
-}
+import { inReviewAtCap, workflowIn } from "./fixtures";
 
 describe("AC-09 reviewer rejects at the revision cap", () => {
   it("AC-09 rejections 1–3 go to revising with revisionRound 1 → 2 → 3 (maxRevisions 3)", () => {
