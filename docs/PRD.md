@@ -50,7 +50,7 @@ never has to watch agents argue forever.
 
 This is the HW4 feature. It owns the life cycle of one task.
 
-### 4.1 States (draft)
+### 4.1 States
 
 | State            | Meaning                                                 | Terminal |
 | ---------------- | ------------------------------------------------------- | -------- |
@@ -62,7 +62,7 @@ This is the HW4 feature. It owns the life cycle of one task.
 | `completed`      | Owner approved                                          | yes      |
 | `rejected`       | Owner rejected                                          | yes      |
 
-### 4.2 Revision round (draft)
+### 4.2 Revision round
 
 `revisionRound` counts how many times the Reviewer has sent the task back. It
 starts at 0. With `maxRevisions = N`, the Worker may revise at most N times;
@@ -70,16 +70,18 @@ the (N+1)-th Reviewer rejection does not start another revision and goes to
 the Owner instead. Example with N = 3: rejections 1, 2 and 3 lead to
 `revising`; rejection 4 leads to `awaiting_human`.
 
-### 4.3 Acceptance criteria (draft — finalised in stage ② plan)
+### 4.3 Acceptance criteria (final)
 
 Each criterion is one testable behaviour. They are grouped into the three TDD
-rounds.
+rounds. The design, API and test layout are in
+`docs/plans/workflow-state-machine.md`.
 
 **Round 1 — initialisation and generation**
 
 - **AC-01** Given a task description and acceptance criteria, when a workflow
   is created without a revision cap, then it is in `pending`, `revisionRound`
-  is 0 and `maxRevisions` is 3.
+  is 0 and `maxRevisions` is 3; when it is created with a valid cap (for
+  example 5), then `maxRevisions` is that value.
 - **AC-02** Given a revision cap that is not a positive integer (0, negative,
   or fractional), when a workflow is created, then creation fails with a
   validation error.
@@ -105,8 +107,8 @@ rounds.
 
 - **AC-09** Given a workflow in `in_review` with `revisionRound` equal to
   `maxRevisions`, when the Reviewer rejects, then it moves to `awaiting_human`
-  (not `revising`), `revisionRound` does not change, and the workflow is
-  marked as having reached the cap.
+  (not `revising`), `revisionRound` does not change, the feedback is stored,
+  and the workflow is marked as having reached the cap.
 - **AC-10** Given a workflow in `awaiting_human`, when the Owner rejects with
   a reason, then it moves to `rejected` and the reason is stored.
 - **AC-11** Given a workflow in any state, when an event that is not allowed
@@ -114,14 +116,18 @@ rounds.
   then the transition fails with an invalid-transition error and the workflow
   is unchanged.
 - **AC-12** Given a workflow in `in_review`, when the Reviewer rejects with
-  empty or whitespace-only feedback, then the transition fails with a
-  validation error and the workflow is unchanged.
+  empty or whitespace-only feedback, or given a workflow in `awaiting_human`,
+  when the Owner rejects with an empty or whitespace-only reason, then the
+  transition fails with a validation error and the workflow is unchanged.
 
-### 4.4 Open questions for stage ②
+### 4.4 Resolved questions
 
-- Error semantics: throw typed errors, or return a result type?
-- Does "marked as having reached the cap" (AC-09) need its own field, or is it
-  derivable from `revisionRound === maxRevisions` plus state?
-- Should the Owner be able to approve a task that reached the cap after a
-  Reviewer rejection? (Current draft: yes, AC-08 applies to any
-  `awaiting_human` workflow.)
+All of these were decided in `docs/plans/workflow-state-machine.md` §7.
+
+- Error semantics: **throw typed errors** (`InvalidTransitionError`,
+  `ValidationError`), not a result type.
+- The cap mark (AC-09) is **its own stored field**, `reachedCap`. It can't be
+  worked out from `revisionRound === maxRevisions`, because a Reviewer
+  approval at that round also leads to `awaiting_human`.
+- The Owner **can** approve a task that reached the cap. AC-08 applies to any
+  `awaiting_human` workflow.
