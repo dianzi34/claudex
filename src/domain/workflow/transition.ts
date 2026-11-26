@@ -17,16 +17,19 @@ type Handler<T extends WorkflowEventType> = (
 /** The events a state accepts, each keyed by its own event type. */
 type StateHandlers = { readonly [T in WorkflowEventType]?: Handler<T> };
 
+/** First result (from generating) and revised result (from revising) alike. */
+const submitResult: Handler<"SUBMIT_RESULT"> = (workflow, event) => ({
+  ...workflow,
+  state: "in_review",
+  latestResult: event.result,
+});
+
 const TRANSITIONS: Record<WorkflowState, StateHandlers> = {
   pending: {
     START_GENERATION: (workflow) => ({ ...workflow, state: "generating" }),
   },
   generating: {
-    SUBMIT_RESULT: (workflow, event) => ({
-      ...workflow,
-      state: "in_review",
-      latestResult: event.result,
-    }),
+    SUBMIT_RESULT: submitResult,
   },
   in_review: {
     REVIEW_APPROVE: (workflow) => ({ ...workflow, state: "awaiting_human" }),
@@ -41,11 +44,7 @@ const TRANSITIONS: Record<WorkflowState, StateHandlers> = {
     }),
   },
   revising: {
-    SUBMIT_RESULT: (workflow, event) => ({
-      ...workflow,
-      state: "in_review",
-      latestResult: event.result,
-    }),
+    SUBMIT_RESULT: submitResult,
   },
   awaiting_human: {
     OWNER_APPROVE: (workflow) => ({ ...workflow, state: "completed" }),
