@@ -33,15 +33,27 @@ const TRANSITIONS: Record<WorkflowState, StateHandlers> = {
   },
   in_review: {
     REVIEW_APPROVE: (workflow) => ({ ...workflow, state: "awaiting_human" }),
-    REVIEW_REJECT: (workflow, event) => ({
-      ...workflow,
-      state: "revising",
-      revisionRound: workflow.revisionRound + 1,
-      reviewFeedback: Object.freeze([
+    REVIEW_REJECT: (workflow, event) => {
+      const reviewFeedback = Object.freeze([
         ...workflow.reviewFeedback,
         event.feedback,
-      ]),
-    }),
+      ]);
+      if (workflow.revisionRound < workflow.maxRevisions) {
+        return {
+          ...workflow,
+          state: "revising",
+          revisionRound: workflow.revisionRound + 1,
+          reviewFeedback,
+        };
+      }
+      // Rejection N+1: no more revisions, hand the task to the Owner.
+      return {
+        ...workflow,
+        state: "awaiting_human",
+        reachedCap: true,
+        reviewFeedback,
+      };
+    },
   },
   revising: {
     SUBMIT_RESULT: submitResult,
