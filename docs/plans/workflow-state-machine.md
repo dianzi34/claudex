@@ -154,6 +154,8 @@ code to pass them (green), then refactor while the tests stay green.
 - AC-01: `createWorkflow` with no cap gives state `pending`,
   `revisionRound` 0, `maxRevisions` 3, `reachedCap` false,
   `latestResult` null, `reviewFeedback` [] and `rejectionReason` null.
+  With a valid cap (for example `maxRevisions: 5`) the workflow keeps that
+  value.
 - AC-02: `maxRevisions` of 0, -1, 1.5, NaN or Infinity throws
   `ValidationError` (`field: "maxRevisions"`). The description and the
   acceptance criteria are not validated (out of scope, see §7).
