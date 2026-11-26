@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createWorkflow, DEFAULT_MAX_REVISIONS } from "@/domain/workflow";
+import {
+  createWorkflow,
+  DEFAULT_MAX_REVISIONS,
+  ValidationError,
+} from "@/domain/workflow";
 import { validInput } from "./fixtures";
 
 describe("AC-01 create a workflow", () => {
@@ -47,5 +51,39 @@ describe("AC-01 create a workflow", () => {
     expect(Object.isFrozen(workflow)).toBe(true);
     expect(Object.isFrozen(workflow.acceptanceCriteria)).toBe(true);
     expect(Object.isFrozen(workflow.reviewFeedback)).toBe(true);
+  });
+});
+
+describe("AC-02 reject an invalid revision cap", () => {
+  const invalidCaps = [0, -1, 1.5, NaN, Infinity];
+
+  it.each(invalidCaps)(
+    "AC-02 throws ValidationError for maxRevisions %s",
+    (maxRevisions) => {
+      expect(() => createWorkflow(validInput({ maxRevisions }))).toThrow(
+        ValidationError,
+      );
+    },
+  );
+
+  it.each(invalidCaps)(
+    "AC-02 reports field maxRevisions for maxRevisions %s",
+    (maxRevisions) => {
+      let thrown: unknown;
+      try {
+        createWorkflow(validInput({ maxRevisions }));
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toBeInstanceOf(ValidationError);
+      expect(thrown).toMatchObject({ field: "maxRevisions" });
+    },
+  );
+
+  it("AC-02 accepts the smallest valid cap of 1", () => {
+    const workflow = createWorkflow(validInput({ maxRevisions: 1 }));
+
+    expect(workflow.maxRevisions).toBe(1);
   });
 });
