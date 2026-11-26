@@ -30,6 +30,15 @@ const TRANSITIONS: Record<WorkflowState, StateHandlers> = {
   },
   in_review: {
     REVIEW_APPROVE: (workflow) => ({ ...workflow, state: "awaiting_human" }),
+    REVIEW_REJECT: (workflow, event) => ({
+      ...workflow,
+      state: "revising",
+      revisionRound: workflow.revisionRound + 1,
+      reviewFeedback: Object.freeze([
+        ...workflow.reviewFeedback,
+        event.feedback,
+      ]),
+    }),
   },
   revising: {},
   awaiting_human: {},
