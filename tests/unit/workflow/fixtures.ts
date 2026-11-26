@@ -53,6 +53,15 @@ export function workflowIn(
         }),
         { type: "REVIEW_APPROVE" },
       );
+    case "completed":
+      return transition(workflowIn("awaiting_human", overrides), {
+        type: "OWNER_APPROVE",
+      });
+    case "rejected":
+      return transition(workflowIn("awaiting_human", overrides), {
+        type: "OWNER_REJECT",
+        reason: "Not good enough",
+      });
     default:
       throw new Error(`workflowIn: state "${state}" is not supported yet`);
   }
