@@ -1,4 +1,7 @@
-import { InvalidTransitionError } from "@/domain/workflow/errors";
+import {
+  InvalidTransitionError,
+  ValidationError,
+} from "@/domain/workflow/errors";
 import type {
   Workflow,
   WorkflowEvent,
@@ -18,6 +21,13 @@ type Handler<T extends WorkflowEventType> = (
 /** The events a state accepts, each keyed by its own event type. */
 type StateHandlers = { readonly [T in WorkflowEventType]?: Handler<T> };
 
+/** Throws ValidationError when `text` is blank (plan §1); text is never trimmed. */
+function requireNonBlank(field: string, text: string): void {
+  if (text.trim() === "") {
+    throw new ValidationError(field, `${field} must not be blank`);
+  }
+}
+
 /** First result (from generating) and revised result (from revising) alike. */
 const submitResult: Handler<"SUBMIT_RESULT"> = (workflow, event) => ({
   ...workflow,
@@ -35,6 +45,7 @@ const TRANSITIONS: Record<WorkflowState, StateHandlers> = {
   in_review: {
     REVIEW_APPROVE: (workflow) => ({ ...workflow, state: "awaiting_human" }),
     REVIEW_REJECT: (workflow, event) => {
+      requireNonBlank("feedback", event.feedback);
       const reviewFeedback = Object.freeze([
         ...workflow.reviewFeedback,
         event.feedback,
@@ -61,11 +72,14 @@ const TRANSITIONS: Record<WorkflowState, StateHandlers> = {
   },
   awaiting_human: {
     OWNER_APPROVE: (workflow) => ({ ...workflow, state: "completed" }),
-    OWNER_REJECT: (workflow, event) => ({
-      ...workflow,
-      state: "rejected",
-      rejectionReason: event.reason,
-    }),
+    OWNER_REJECT: (workflow, event) => {
+      requireNonBlank("reason", event.reason);
+      return {
+        ...workflow,
+        state: "rejected",
+        rejectionReason: event.reason,
+      };
+    },
   },
   completed: {},
   rejected: {},
