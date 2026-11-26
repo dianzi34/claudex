@@ -36,6 +36,14 @@ export function workflowIn(
         type: "SUBMIT_RESULT",
         result: "First draft",
       });
+    case "revising":
+      return transition(
+        transition(transition(pending, { type: "START_GENERATION" }), {
+          type: "SUBMIT_RESULT",
+          result: "First draft",
+        }),
+        { type: "REVIEW_REJECT", feedback: "Needs another pass" },
+      );
     default:
       throw new Error(`workflowIn: state "${state}" is not supported yet`);
   }
