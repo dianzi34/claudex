@@ -14,7 +14,14 @@ const TRANSITIONS: Record<
   pending: {
     START_GENERATION: (workflow) => ({ ...workflow, state: "generating" }),
   },
-  generating: {},
+  generating: {
+    SUBMIT_RESULT: (workflow, event) => ({
+      ...workflow,
+      state: "in_review",
+      latestResult: (event as Extract<WorkflowEvent, { type: "SUBMIT_RESULT" }>)
+        .result,
+    }),
+  },
   in_review: {},
   revising: {},
   awaiting_human: {},
