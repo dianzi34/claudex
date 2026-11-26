@@ -40,7 +40,13 @@ const TRANSITIONS: Record<WorkflowState, StateHandlers> = {
       ]),
     }),
   },
-  revising: {},
+  revising: {
+    SUBMIT_RESULT: (workflow, event) => ({
+      ...workflow,
+      state: "in_review",
+      latestResult: event.result,
+    }),
+  },
   awaiting_human: {},
   completed: {},
   rejected: {},
