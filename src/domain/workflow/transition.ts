@@ -60,6 +60,11 @@ const TRANSITIONS: Record<WorkflowState, StateHandlers> = {
   },
   awaiting_human: {
     OWNER_APPROVE: (workflow) => ({ ...workflow, state: "completed" }),
+    OWNER_REJECT: (workflow, event) => ({
+      ...workflow,
+      state: "rejected",
+      rejectionReason: event.reason,
+    }),
   },
   completed: {},
   rejected: {},
