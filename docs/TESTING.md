@@ -39,12 +39,21 @@ No AI attribution trailers in commits (see `CLAUDE.md`).
 
 ## 3. Where tests live and how they are named
 
-- Tests live under `tests/unit/`, mirroring the source tree below
-  `src/domain/`: `src/domain/workflow/transition.ts` →
-  `tests/unit/workflow/transition.test.ts`.
+- Tests live under `tests/unit/`, in a folder that mirrors the source folder
+  below `src/domain/`: `src/domain/workflow/` → `tests/unit/workflow/`.
+- Inside that folder, test files are split by behaviour, not one test file
+  per source file. Each file covers one group of ACs from a single TDD round.
+  For the workflow (plan §6) the files are `create-workflow.test.ts`,
+  `generation.test.ts`, `review.test.ts`, `owner-approval.test.ts`,
+  `revision-cap.test.ts`, `owner-rejection.test.ts` and
+  `invalid-transitions.test.ts`.
+- Shared helpers (`validInput()`, `workflowIn(state, opts)`) live in
+  `tests/unit/workflow/fixtures.ts`. It isn't a `*.test.ts` file, so Vitest
+  doesn't run it as a test.
 - Files end in `.test.ts` (Vitest only collects `tests/**/*.test.ts`;
   `.test.tsx` is not picked up).
-- Import source through the alias: `import { … } from "@/domain/workflow/…"`.
+- Import source through the alias and the public index only:
+  `import { … } from "@/domain/workflow"`.
 - Group tests by AC and start every test name with the AC id, so
   `npx vitest run -t "AC-06"` selects exactly that criterion:
 
@@ -66,16 +75,18 @@ describe("AC-06 reviewer rejects below the cap", () => {
   cap values `0`, negative and fractional (AC-02); empty and whitespace-only
   feedback (AC-12); every event in `completed` and `rejected` (AC-11 — use
   `it.each` over state × event).
-- **Errors.** Assert the error type/kind, not just "it failed". The exact
-  mechanism (thrown typed error vs. result type) is fixed in the stage ② plan.
+- **Errors.** Errors are thrown as typed errors (`InvalidTransitionError` /
+  `ValidationError`, see plan §3). Assert the error class, for example
+  `toThrow(InvalidTransitionError)`, not just "it failed".
 - **Immutability (ARCHITECTURE D2).** A successful transition returns a new
   value and leaves its input untouched; a failed transition leaves the input
   exactly as it was. Snapshot the input with `structuredClone` before the
   call and compare afterwards:
 
 ```ts
+const workflow = workflowIn("pending"); // from fixtures.ts
 const before = structuredClone(workflow);
-expect(() => apply(workflow, { type: "OWNER_APPROVE" })).toThrow(
+expect(() => transition(workflow, { type: "OWNER_APPROVE" })).toThrow(
   InvalidTransitionError,
 );
 expect(workflow).toEqual(before);
@@ -89,7 +100,7 @@ expect(workflow).toEqual(before);
 ```bash
 npm test                                          # all tests once
 npm run test:watch                                # watch mode while in a cycle
-npx vitest run tests/unit/workflow/transition.test.ts   # single file
+npx vitest run tests/unit/workflow/review.test.ts       # single file
 npx vitest run -t "AC-06"                         # single AC / test by name
 npm run test:coverage                             # v8 coverage (text + coverage/ html)
 ```
