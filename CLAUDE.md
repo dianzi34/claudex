@@ -62,7 +62,7 @@ Strict TDD, one acceptance criterion per red → green → refactor cycle; the f
 
 - Do keep each change scoped to one issue/AC; update the PRD/ARCHITECTURE/TESTING docs when a decision changes, rather than restating it here.
 - Do run `lint`, `typecheck`, `format:check` and `test` before opening a PR.
-- Don't add a state-machine library or any runtime dependency without both teammates agreeing.
+- Don't add runtime dependencies to domain code (`src/domain/`) — no state-machine library or anything else. Other layers may add one only after both teammates agree in the PR.
 - Don't build AI provider calls, persistence or UI for HW4 — out of scope (PRD §3).
 - Don't write implementation in a red commit, or tests in a green commit.
 - Don't put secrets in code or `NEXT_PUBLIC_` vars; copy `.env.example` to `.env.local` (never committed).
